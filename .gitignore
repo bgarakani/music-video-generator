@@ -30,3 +30,16 @@ films/
 !input/**
 !music/
 !music/**
+
+# Ignore all media files everywhere
+*.mp3
+*.m4a
+*.wav
+*.flac
+*.ogg
+*.aac
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.wmv
