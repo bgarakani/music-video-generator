@@ -1,0 +1,32 @@
+# macOS & editors
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# Project-specific
+.claude/
+archival_output/
+experiments/
+films/
+
+# Ignore media outputs in the repo root (we'll keep source media in input/ & music/)
+*.mp4
+*.m4a
+*.mp3
+*.wav
+
+# But DO track source/input media
+!input/
+!input/**
+!music/
+!music/**
