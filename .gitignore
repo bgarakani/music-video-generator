@@ -25,12 +25,6 @@ films/
 *.mp3
 *.wav
 
-# But DO track source/input media
-!input/
-!input/**
-!music/
-!music/**
-
 # Ignore all media files everywhere
 *.mp3
 *.m4a
