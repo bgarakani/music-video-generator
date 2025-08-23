@@ -18,6 +18,7 @@ venv/
 archival_output/
 experiments/
 films/
+music/
 
 # Ignore all media files everywhere
 *.mp3
