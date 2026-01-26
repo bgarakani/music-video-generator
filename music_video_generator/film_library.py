@@ -298,6 +298,11 @@ class FilmLibrary:
         Args:
             scenes: List of scene metadata dictionaries
         """
+        # Validate input
+        if not scenes or not isinstance(scenes, list):
+            print("   ✗ No scenes provided for thumbnail generation")
+            return
+
         print(f"\n🖼️  Generating thumbnails for {len(scenes)} scenes...")
 
         # Ensure thumbnails directory exists
@@ -322,6 +327,7 @@ class FilmLibrary:
                     cv2.imwrite(str(thumb_path), thumb_bgr)
 
                 except Exception as e:
+                    print(f"   ⚠ Failed to generate thumbnail for scene {i}: {e}")
                     continue
 
             video.close()
@@ -339,11 +345,17 @@ class FilmLibrary:
         Returns:
             list: Scenes with added analysis metadata
         """
+        # Validate input
+        if not scenes or not isinstance(scenes, list):
+            print("   ✗ No scenes provided for analysis")
+            return scenes
+
         print(f"\n🔍 Analyzing {len(scenes)} scenes...")
 
         try:
             video = VideoFileClip(self.film_path, audio=False)
             video_duration = video.duration
+            failed_analyses = 0
 
             for scene in scenes:
                 try:
@@ -377,12 +389,17 @@ class FilmLibrary:
                 except Exception as e:
                     # Set defaults on failure
                     scene['avg_brightness'] = 0.0
+                    scene['avg_color_rgb'] = [0.0, 0.0, 0.0]
+                    scene['avg_color_hex'] = '#000000'
                     scene['pace'] = 'medium'
                     scene['position_ratio'] = 0.0
+                    failed_analyses += 1
                     continue
 
             video.close()
             print(f"   ✓ Analyzed {len(scenes)} scenes")
+            if failed_analyses > 0:
+                print(f"   ⚠ Failed to analyze {failed_analyses} scenes")
 
             return scenes
 
