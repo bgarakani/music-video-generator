@@ -204,11 +204,16 @@ class FilmLibrary:
         """Extract individual scene clips to clips/ directory.
 
         Args:
-            scenes: List of scene metadata dictionaries
+            scenes: List of scene metadata dictionaries (will be modified with 'has_clip' flag)
 
         Returns:
             int: Count of successfully exported clips
         """
+        # Validate input
+        if not scenes or not isinstance(scenes, list):
+            print("   ✗ No scenes provided for clip extraction")
+            return 0
+
         print(f"\n🎞️  Extracting {len(scenes)} scene clips...")
 
         # Ensure clips directory exists
@@ -217,6 +222,7 @@ class FilmLibrary:
         clips_exported = 0
         clips_failed = []
 
+        video = None
         try:
             # Load video without audio (faster, clips don't need audio)
             video = VideoFileClip(self.film_path, audio=False)
@@ -269,10 +275,6 @@ class FilmLibrary:
                     scene['has_clip'] = False
                     continue
 
-            # Cleanup
-            video.close()
-            gc.collect()
-
             print(f"   ✓ Exported {clips_exported} clips")
             if clips_failed:
                 print(f"   ⚠ Failed to export {len(clips_failed)} clips")
@@ -282,6 +284,11 @@ class FilmLibrary:
         except Exception as e:
             print(f"   ✗ Clip extraction failed: {e}")
             return 0
+        finally:
+            # Always cleanup resources
+            if video is not None:
+                video.close()
+            gc.collect()
 
     def get_scenes(self):
         """Return list of available scenes with metadata.
