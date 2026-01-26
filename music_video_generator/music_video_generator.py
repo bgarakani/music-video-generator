@@ -106,21 +106,24 @@ class MusicVideoGenerator:
             # Calculate duration
             duration = len(audio_data) / sample_rate
 
+            # Extract tempo from array (librosa returns array)
+            tempo_scalar = tempo[0] if isinstance(tempo, np.ndarray) else tempo
+
             # Store results
             self.beats = beat_frames
             self.beat_times = [self.safe_float(t) for t in beat_times]
 
             self.music_analysis = {
                 'duration': self.safe_float(duration),
-                'bpm': self.safe_float(tempo),
+                'bpm': self.safe_float(tempo_scalar),
                 'beats_detected': len(beat_times),
                 'beats': self.beat_times,
                 'tempo_confidence': 0.85,  # Placeholder, librosa doesn't provide this
                 'sample_rate': self.safe_int(sample_rate)
             }
 
-            print(f"   Duration: {duration:.1f}s")
-            print(f"   BPM: {tempo:.1f}")
+            print(f"   Duration: {self.safe_float(duration):.1f}s")
+            print(f"   BPM: {self.safe_float(tempo_scalar):.1f}")
             print(f"   Beats detected: {len(beat_times)}")
 
             return self.music_analysis
