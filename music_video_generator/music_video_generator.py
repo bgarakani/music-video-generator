@@ -170,3 +170,170 @@ class MusicVideoGenerator:
 
         print(f"\n✓ Scene-beat ratio valid: {len(scenes)} scenes for {effective_beats} beats")
         return True
+
+    def select_scenes(self):
+        """Apply strategy to map scenes to beats.
+
+        Returns:
+            list: Scene-to-beat mappings
+        """
+        print(f"\n🎬 Selecting scenes using '{self.strategy}' strategy...")
+
+        scenes = self.film_library.get_scenes()
+
+        # Apply beat_skip
+        selected_beats = self.beat_times[::self.beat_skip]
+
+        print(f"   Available scenes: {len(scenes)}")
+        print(f"   Beats to use: {len(selected_beats)} (every {self.beat_skip} beat)")
+
+        # Call appropriate strategy method
+        strategy_map = {
+            'progressive': self._select_progressive,
+            'random': self._select_random,
+            'forward_only': self._select_forward_only,
+            'no_repeat': self._select_no_repeat
+        }
+
+        selected = strategy_map[self.strategy](scenes, selected_beats)
+
+        print(f"   ✓ Selected {len(selected)} scene-to-beat mappings")
+
+        self.selected_scenes = selected
+        return selected
+
+    def _select_progressive(self, scenes, beat_times):
+        """Evenly distributed chronological sampling.
+
+        Args:
+            scenes: Available scenes
+            beat_times: Beat time points
+
+        Returns:
+            list: Scene-to-beat mappings
+        """
+        mappings = []
+        num_beats = len(beat_times) - 1
+
+        for i in range(num_beats):
+            beat_start = beat_times[i]
+            beat_end = beat_times[i + 1]
+            beat_duration = beat_end - beat_start
+
+            # Map beat index to scene position
+            scene_index = int((i / num_beats) * len(scenes))
+            scene_index = min(scene_index, len(scenes) - 1)
+            selected_scene = scenes[scene_index]
+
+            mappings.append({
+                'beat_start': beat_start,
+                'beat_end': beat_end,
+                'beat_duration': beat_duration,
+                'scene': selected_scene,
+                'beat_index': i
+            })
+
+        return mappings
+
+    def _select_random(self, scenes, beat_times):
+        """Pure random selection, allows repetition.
+
+        Args:
+            scenes: Available scenes
+            beat_times: Beat time points
+
+        Returns:
+            list: Scene-to-beat mappings
+        """
+        mappings = []
+        num_beats = len(beat_times) - 1
+
+        for i in range(num_beats):
+            beat_start = beat_times[i]
+            beat_end = beat_times[i + 1]
+            beat_duration = beat_end - beat_start
+
+            # Random selection
+            selected_scene = scenes[np.random.randint(0, len(scenes))]
+
+            mappings.append({
+                'beat_start': beat_start,
+                'beat_end': beat_end,
+                'beat_duration': beat_duration,
+                'scene': selected_scene,
+                'beat_index': i
+            })
+
+        return mappings
+
+    def _select_forward_only(self, scenes, beat_times):
+        """Sequential progression without backtracking.
+
+        Args:
+            scenes: Available scenes
+            beat_times: Beat time points
+
+        Returns:
+            list: Scene-to-beat mappings
+        """
+        mappings = []
+        num_beats = len(beat_times) - 1
+        current_scene_index = 0
+
+        for i in range(num_beats):
+            beat_start = beat_times[i]
+            beat_end = beat_times[i + 1]
+            beat_duration = beat_end - beat_start
+
+            # Use current scene and advance
+            selected_scene = scenes[current_scene_index]
+
+            mappings.append({
+                'beat_start': beat_start,
+                'beat_end': beat_end,
+                'beat_duration': beat_duration,
+                'scene': selected_scene,
+                'beat_index': i
+            })
+
+            # Move to next scene (with wrap-around)
+            current_scene_index = (current_scene_index + 1) % len(scenes)
+
+        return mappings
+
+    def _select_no_repeat(self, scenes, beat_times):
+        """Random selection from unused pool.
+
+        Args:
+            scenes: Available scenes
+            beat_times: Beat time points
+
+        Returns:
+            list: Scene-to-beat mappings
+        """
+        mappings = []
+        num_beats = len(beat_times) - 1
+        unused_scenes = list(scenes)
+
+        for i in range(num_beats):
+            beat_start = beat_times[i]
+            beat_end = beat_times[i + 1]
+            beat_duration = beat_end - beat_start
+
+            # If pool exhausted, fall back to forward-only
+            if not unused_scenes:
+                unused_scenes = list(scenes)
+
+            # Random selection from unused pool
+            scene_index = np.random.randint(0, len(unused_scenes))
+            selected_scene = unused_scenes.pop(scene_index)
+
+            mappings.append({
+                'beat_start': beat_start,
+                'beat_end': beat_end,
+                'beat_duration': beat_duration,
+                'scene': selected_scene,
+                'beat_index': i
+            })
+
+        return mappings

@@ -124,3 +124,65 @@ class TestMusicVideoGenerator:
 
         result = gen.validate_scene_beat_ratio()
         assert result is True
+
+    def test_select_progressive_strategy(self, tmp_path):
+        """Test progressive scene selection strategy."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), clips_library_dir=str(tmp_path / "lib"))
+        library.scenes = [{'id': i, 'start': i*10, 'end': (i+1)*10, 'duration': 10}
+                          for i in range(100)]
+
+        song_path = tmp_path / "test.mp3"
+        song_path.touch()
+
+        gen = MusicVideoGenerator(library, str(song_path), strategy='progressive')
+        gen.beat_times = [i * 0.5 for i in range(50)]
+
+        selected = gen.select_scenes()
+
+        assert len(selected) == 49  # Note: num_beats - 1
+        # Progressive should sample evenly from start to end
+        assert selected[0]['scene']['id'] < selected[-1]['scene']['id']
+
+    def test_select_random_strategy(self, tmp_path):
+        """Test random scene selection strategy."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), clips_library_dir=str(tmp_path / "lib"))
+        library.scenes = [{'id': i, 'start': i*10, 'end': (i+1)*10, 'duration': 10}
+                          for i in range(20)]
+
+        song_path = tmp_path / "test.mp3"
+        song_path.touch()
+
+        gen = MusicVideoGenerator(library, str(song_path), strategy='random')
+        gen.beat_times = [i * 0.5 for i in range(30)]
+
+        selected = gen.select_scenes()
+
+        assert len(selected) == 29  # Note: num_beats - 1
+
+    def test_select_forward_only_strategy(self, tmp_path):
+        """Test forward-only scene selection strategy."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), clips_library_dir=str(tmp_path / "lib"))
+        library.scenes = [{'id': i, 'start': i*10, 'end': (i+1)*10, 'duration': 10}
+                          for i in range(50)]
+
+        song_path = tmp_path / "test.mp3"
+        song_path.touch()
+
+        gen = MusicVideoGenerator(library, str(song_path), strategy='forward_only')
+        gen.beat_times = [i * 0.5 for i in range(30)]
+
+        selected = gen.select_scenes()
+
+        assert len(selected) == 29  # Note: num_beats - 1
+        # Forward-only should never backtrack
+        scene_ids = [s['scene']['id'] for s in selected]
+        assert scene_ids == sorted(scene_ids)
