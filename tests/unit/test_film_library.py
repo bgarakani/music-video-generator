@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for FilmLibrary class."""
 import pytest
+import json
 from pathlib import Path
 from music_video_generator.film_library import FilmLibrary
 
@@ -49,3 +50,57 @@ class TestFilmLibrary:
         assert library.safe_int(np.int64(42)) == 42
         assert library.safe_int("invalid") == 0
         assert library.safe_int(None) == 0
+
+    def test_check_cache_no_metadata(self, tmp_path):
+        """Test cache check when no metadata exists."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), clips_library_dir=str(tmp_path / "lib"))
+        result = library._check_cache()
+
+        assert result is False
+
+    def test_check_cache_with_matching_params(self, tmp_path):
+        """Test cache check with matching parameters."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        # Create library and save metadata
+        library = FilmLibrary(str(film_path), threshold=30.0, clips_library_dir=str(tmp_path / "lib"))
+        library.library_dir.mkdir(parents=True, exist_ok=True)
+
+        metadata = {
+            "scene_detection_params": {
+                "threshold": 30.0,
+                "min_scene_len": 1.0
+            },
+            "total_scenes": 10
+        }
+
+        with open(library.library_dir / "metadata.json", "w") as f:
+            json.dump(metadata, f)
+
+        result = library._check_cache()
+        assert result is True
+
+    def test_check_cache_with_different_params(self, tmp_path):
+        """Test cache check with different parameters."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), threshold=25.0, clips_library_dir=str(tmp_path / "lib"))
+        library.library_dir.mkdir(parents=True, exist_ok=True)
+
+        metadata = {
+            "scene_detection_params": {
+                "threshold": 30.0,
+                "min_scene_len": 1.0
+            }
+        }
+
+        with open(library.library_dir / "metadata.json", "w") as f:
+            json.dump(metadata, f)
+
+        result = library._check_cache()
+        assert result is False

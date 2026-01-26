@@ -66,6 +66,56 @@ class FilmLibrary:
         except (TypeError, ValueError):
             return 0
 
+    def _check_cache(self):
+        """Check if valid cached clips exist with matching parameters.
+
+        Returns:
+            bool: True if cache exists and parameters match
+        """
+        metadata_path = self.library_dir / "metadata.json"
+
+        # Check if metadata file exists
+        if not metadata_path.exists():
+            return False
+
+        # Load metadata
+        try:
+            with open(metadata_path, 'r') as f:
+                self.metadata = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return False
+
+        # Check if parameters match
+        cached_params = self.metadata.get("scene_detection_params", {})
+
+        if (cached_params.get("threshold") == self.threshold and
+            cached_params.get("min_scene_len") == self.min_scene_len):
+            return True
+
+        return False
+
+    def _load_from_cache(self):
+        """Load scenes and metadata from existing cache.
+
+        Returns:
+            bool: True if successfully loaded from cache
+        """
+        metadata_path = self.library_dir / "metadata.json"
+
+        try:
+            with open(metadata_path, 'r') as f:
+                self.metadata = json.load(f)
+
+            self.scenes = self.metadata.get("scenes", [])
+
+            print(f"✓ Loaded {len(self.scenes)} scenes from cache")
+            print(f"  Cache location: {self.library_dir}")
+
+            return True
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"✗ Failed to load cache: {e}")
+            return False
+
     def get_scenes(self):
         """Return list of available scenes with metadata.
 
