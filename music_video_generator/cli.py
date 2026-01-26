@@ -68,15 +68,15 @@ Examples:
     # Print header
     print("""
     ╔══════════════════════════════════════════════════════════════╗
-    ║         MUSIC VIDEO GENERATOR v2.0                          ║
+    ║         MUSIC VIDEO GENERATOR v2.0                           ║
     ╠══════════════════════════════════════════════════════════════╣
     """)
 
     try:
         # Step 1: Prepare FilmLibrary
-        print(f"║  Film: {Path(args.film).name:<53} ║")
-        print(f"║  Threshold: {args.threshold:<48} ║")
-        print("╚══════════════════════════════════════════════════════════════╝\n")
+        print(f"    ║  Film: {Path(args.film).name:<53} ║")
+        print(f"    ║  Threshold: {args.threshold:<48} ║")
+        print("    ╚══════════════════════════════════════════════════════════════╝\n")
 
         library = FilmLibrary(
             args.film,
