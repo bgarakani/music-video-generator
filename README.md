@@ -112,6 +112,240 @@ python music_video_generator.py --film movie.mp4 --song track.mp3 \
   --clips-dir /path/to/clips_library
 ```
 
+## Usage Examples
+
+### Example 1: Create Your First Music Video
+
+Complete workflow from start to finish:
+
+```bash
+# Step 1: Prepare a film (one-time, ~2 minutes for 10-min video)
+python music_video_generator.py --prepare --film test-assets/movie.mp4
+
+# Step 2: Generate music video (fast, ~1 minute for 3-min song)
+python music_video_generator.py --film test-assets/movie.mp4 --song test-assets/song.m4a
+
+# Output: output/movie_song_progressive_20260126_120000/final_output.mp4
+```
+
+**What you'll see:**
+```
+🎬 Detecting scenes in movie...
+   Threshold: 30.0
+   Min scene length: 1.0s
+   Found 127 raw scenes
+   ✓ Detected 89 scenes (filtered by min_scene_len)
+
+🎵 Analyzing audio: song
+   Duration: 180.5s
+   BPM: 128.3
+   Beats detected: 384
+
+✓ Scene-beat ratio: 89 scenes / 384 beats = 0.23 (sufficient)
+
+🎨 Selecting scenes using progressive strategy...
+   ✓ Selected 384 scenes
+
+🎬 Assembling music video...
+   ✓ Generated: output/movie_song_progressive_20260126_120000/final_output.mp4
+```
+
+### Example 2: Archival Footage + Hip-Hop Beat
+
+Fast-paced music video with random cuts:
+
+```bash
+# Prepare 1950s archival footage
+python music_video_generator.py --prepare \
+  --film films/1950s_archive.mp4 \
+  --threshold 25.0 \
+  --min-scene-len 0.5
+
+# Generate with random strategy, every other beat
+python music_video_generator.py \
+  --film films/1950s_archive.mp4 \
+  --song music/hiphop_track.mp3 \
+  --strategy random \
+  --beat-skip 2 \
+  --output remixes/1950s_hiphop_remix.mp4
+```
+
+**Why these settings:**
+- Lower threshold (25.0) detects more subtle scene changes in old footage
+- Shorter min-scene-len (0.5s) allows rapid cuts
+- Random strategy creates energetic, non-linear flow
+- Every 2nd beat (beat-skip 2) prevents overwhelming rapid cuts
+
+### Example 3: Documentary + Ambient Music
+
+Smooth, contemplative progression:
+
+```bash
+# Prepare nature documentary
+python music_video_generator.py --prepare \
+  --film films/nature_doc.mp4 \
+  --threshold 35.0 \
+  --min-scene-len 2.0
+
+# Generate with progressive strategy, every 4th beat
+python music_video_generator.py \
+  --film films/nature_doc.mp4 \
+  --song music/ambient_track.mp3 \
+  --strategy progressive \
+  --beat-skip 4
+```
+
+**Why these settings:**
+- Higher threshold (35.0) only detects major scene changes
+- Longer min-scene-len (2.0s) creates smoother flow
+- Progressive strategy maintains narrative chronology
+- Every 4th beat allows scenes to breathe
+
+### Example 4: Multiple Songs, Same Film
+
+Reuse cached film analysis for different songs:
+
+```bash
+# Prepare film once
+python music_video_generator.py --prepare --film films/classic_film.mp4
+
+# Generate multiple variations
+python music_video_generator.py --film films/classic_film.mp4 --song music/song1.mp3 --strategy progressive
+python music_video_generator.py --film films/classic_film.mp4 --song music/song2.mp3 --strategy random
+python music_video_generator.py --film films/classic_film.mp4 --song music/song3.mp3 --strategy forward_only --beat-skip 2
+python music_video_generator.py --film films/classic_film.mp4 --song music/song4.mp3 --strategy no_repeat --beat-skip 3
+
+# Each subsequent generation is fast (~1-2 minutes) since film is cached
+```
+
+### Example 5: Experimenting with Scene Detection
+
+If you get too few or too many scenes:
+
+```bash
+# Too few scenes? Lower threshold and min-scene-len
+python music_video_generator.py --prepare \
+  --film movie.mp4 \
+  --threshold 20.0 \
+  --min-scene-len 0.5 \
+  --force  # Force regeneration
+
+# Too many scenes? Raise threshold and min-scene-len
+python music_video_generator.py --prepare \
+  --film movie.mp4 \
+  --threshold 40.0 \
+  --min-scene-len 2.0 \
+  --force
+```
+
+### Example 6: Batch Processing
+
+Process multiple films and songs:
+
+```bash
+#!/bin/bash
+# prepare_all_films.sh
+
+# Prepare all films in films/ directory
+for film in films/*.mp4; do
+    echo "Preparing $(basename $film)..."
+    python music_video_generator.py --prepare --film "$film"
+done
+
+# Generate videos for each film+song combination
+for film in films/*.mp4; do
+    for song in music/*.mp3; do
+        echo "Generating: $(basename $film) + $(basename $song)"
+        python music_video_generator.py \
+            --film "$film" \
+            --song "$song" \
+            --strategy progressive
+    done
+done
+```
+
+### Example 7: Python API Usage
+
+Use the Music Video Generator in your Python scripts:
+
+```python
+from music_video_generator import FilmLibrary, MusicVideoGenerator
+
+# Prepare film library
+library = FilmLibrary(
+    film_path="films/movie.mp4",
+    threshold=30.0,
+    min_scene_len=1.0,
+    clips_library_dir="clips_library"
+)
+
+# Check if cached, otherwise process
+if not library._check_cache():
+    library.detect_scenes()
+    library.extract_clips(library.scenes)
+    library.generate_thumbnails(library.scenes)
+    library.analyze_scenes(library.scenes)
+    library.save_metadata()
+else:
+    library._load_from_cache()
+
+# Generate music video
+generator = MusicVideoGenerator(
+    film_library=library,
+    song_path="music/track.mp3",
+    strategy="progressive",
+    beat_skip=2
+)
+
+# Run the generation pipeline
+generator.analyze_audio()
+if generator.validate_scene_beat_ratio():
+    generator.select_scenes()
+    generator.generate()
+```
+
+### Strategy Comparison Examples
+
+Same film, same song, different strategies:
+
+```bash
+# Progressive: Evenly distributed through film
+python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy progressive
+# Result: Scene 1, 23, 45, 67, 89... (evenly spaced)
+
+# Random: Pure chaos
+python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy random
+# Result: Scene 12, 89, 12, 3, 67, 89, 45... (repetition allowed)
+
+# Forward-only: One-way journey
+python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy forward_only
+# Result: Scene 1, 2, 5, 8, 12, 15... (always increasing)
+
+# No-repeat: Maximum variety
+python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy no_repeat
+# Result: Scene 34, 12, 78, 5, 90, 23... (each scene used once)
+```
+
+### Tips for Best Results
+
+**Scene Detection:**
+- Start with default threshold (30.0) and adjust
+- Very static content (interviews): threshold 20-25
+- Dynamic content (action films): threshold 30-35
+- Subtle transitions (art films): threshold 15-20
+
+**Beat Skip:**
+- High-energy tracks: beat-skip 1 (every beat)
+- Medium tempo: beat-skip 2 (every other beat)
+- Slow/ambient: beat-skip 3-4
+- Experimental: beat-skip 1 with longer min-scene-len
+
+**Strategy Selection:**
+- Narrative coherence needed? → `progressive` or `forward_only`
+- Abstract/experimental? → `random`
+- Maximum visual variety? → `no_repeat`
+- Building tension/climax? → `forward_only`
+
 ## Architecture
 
 ### Two-Phase Design
