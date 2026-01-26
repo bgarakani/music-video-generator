@@ -187,3 +187,26 @@ class TestFilmLibrary:
 
         assert count > 0
         assert (library.clips_dir / "scene_0000.mp4").exists()
+
+    @pytest.mark.skipif(not os.path.exists("test-assets/test_video.mp4"),
+                        reason="Test video not available")
+    def test_generate_thumbnails_and_analyze(self, tmp_path):
+        """Test thumbnail generation and scene analysis."""
+        library = FilmLibrary("test-assets/test_video.mp4",
+                             clips_library_dir=str(tmp_path))
+
+        library.thumbnails_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create sample scenes
+        library.scenes = [
+            {'id': 0, 'start': 1.0, 'end': 3.0, 'duration': 2.0,
+             'thumbnail_filename': 'thumb_0000.jpg'}
+        ]
+
+        library.generate_thumbnails(library.scenes)
+        library.analyze_scenes(library.scenes)
+
+        assert (library.thumbnails_dir / "thumb_0000.jpg").exists()
+        assert 'avg_brightness' in library.scenes[0]
+        assert 'avg_color_hex' in library.scenes[0]
+        assert 'pace' in library.scenes[0]

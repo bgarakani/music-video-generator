@@ -12,6 +12,8 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="scenedete
 from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector
 from moviepy.editor import VideoFileClip
+import cv2
+import numpy as np
 
 
 class FilmLibrary:
@@ -289,6 +291,104 @@ class FilmLibrary:
             if video is not None:
                 video.close()
             gc.collect()
+
+    def generate_thumbnails(self, scenes):
+        """Generate thumbnail images for each scene.
+
+        Args:
+            scenes: List of scene metadata dictionaries
+        """
+        print(f"\n🖼️  Generating thumbnails for {len(scenes)} scenes...")
+
+        # Ensure thumbnails directory exists
+        self.thumbnails_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            video = VideoFileClip(self.film_path, audio=False)
+
+            for i, scene in enumerate(scenes):
+                try:
+                    # Get middle frame of scene
+                    middle_time = (scene['start'] + scene['end']) / 2
+                    frame = video.get_frame(middle_time)
+
+                    # Save thumbnail
+                    thumb_path = self.thumbnails_dir / scene['thumbnail_filename']
+                    thumb_height = 120
+                    aspect_ratio = frame.shape[1] / frame.shape[0]
+                    thumb_width = int(thumb_height * aspect_ratio)
+                    thumb = cv2.resize(frame, (thumb_width, thumb_height))
+                    thumb_bgr = cv2.cvtColor(thumb, cv2.COLOR_RGB2BGR)
+                    cv2.imwrite(str(thumb_path), thumb_bgr)
+
+                except Exception as e:
+                    continue
+
+            video.close()
+            print(f"   ✓ Generated {len(scenes)} thumbnails")
+
+        except Exception as e:
+            print(f"   ✗ Thumbnail generation failed: {e}")
+
+    def analyze_scenes(self, scenes):
+        """Add color, brightness, pace analysis to scene metadata.
+
+        Args:
+            scenes: List of scene metadata dictionaries
+
+        Returns:
+            list: Scenes with added analysis metadata
+        """
+        print(f"\n🔍 Analyzing {len(scenes)} scenes...")
+
+        try:
+            video = VideoFileClip(self.film_path, audio=False)
+            video_duration = video.duration
+
+            for scene in scenes:
+                try:
+                    # Get middle frame
+                    middle_time = (scene['start'] + scene['end']) / 2
+                    frame = video.get_frame(middle_time)
+
+                    # Color analysis
+                    avg_color = np.mean(frame, axis=(0, 1))
+                    scene['avg_color_rgb'] = avg_color.tolist()
+                    scene['avg_color_hex'] = '#{:02x}{:02x}{:02x}'.format(
+                        int(avg_color[0]), int(avg_color[1]), int(avg_color[2])
+                    )
+
+                    # Brightness analysis
+                    gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+                    scene['avg_brightness'] = float(np.mean(gray))
+
+                    # Pace analysis
+                    duration = scene['duration']
+                    if duration < 2:
+                        scene['pace'] = 'fast'
+                    elif duration > 10:
+                        scene['pace'] = 'slow'
+                    else:
+                        scene['pace'] = 'medium'
+
+                    # Position ratio in film
+                    scene['position_ratio'] = scene['start'] / video_duration
+
+                except Exception as e:
+                    # Set defaults on failure
+                    scene['avg_brightness'] = 0.0
+                    scene['pace'] = 'medium'
+                    scene['position_ratio'] = 0.0
+                    continue
+
+            video.close()
+            print(f"   ✓ Analyzed {len(scenes)} scenes")
+
+            return scenes
+
+        except Exception as e:
+            print(f"   ✗ Scene analysis failed: {e}")
+            return scenes
 
     def get_scenes(self):
         """Return list of available scenes with metadata.
