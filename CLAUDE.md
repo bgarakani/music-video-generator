@@ -15,6 +15,25 @@ pip install librosa moviepy scenedetect[opencv] numpy matplotlib opencv-python
 
 **Note:** FFmpeg must be installed on your system for video processing.
 
+## Quick Start Commands
+
+### Prepare Film Library (one-time per film)
+```bash
+python music_video_generator.py --prepare --film movie.mp4 --threshold 30.0
+```
+
+### Generate Music Video
+```bash
+# With every beat (default)
+python music_video_generator.py --film movie.mp4 --song track.mp3
+
+# With every 2nd beat (fewer cuts)
+python music_video_generator.py --film movie.mp4 --song track.mp3 --beat-skip 2
+
+# With random strategy and every 4th beat
+python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy random --beat-skip 4
+```
+
 ## Testing & Development
 
 ### Test All Functionality
@@ -41,22 +60,24 @@ python tempo_change_test.py      # Test tempo adaptation
 
 ## Core Architecture
 
-### Main Generator Classes
+### Active Tool
 
-1. **ArchivalRemixEngine** (`ArchivalRemixEngine.py`)
-   - Original archival remix engine for cultural memory projects
-   - Transforms archival footage into artistic expressions
+**music_video_generator.py** - Unified Music Video Generator v2.0
+- Two-phase architecture: FilmLibrary + MusicVideoGenerator
+- Intelligent caching with parameter tracking
+- Four scene selection strategies: progressive, random, forward_only, no_repeat
+- Beat-skip parameter for controlling cut frequency
+- CLI interface with comprehensive options
 
-2. **UltraRobustArchivalEngine** (`ultraRobustArchivalToolv20.py`)
-   - Most advanced version with thumbnail previews and HTML analysis
-   - Creates timestamped output directories with complete analysis
-   - Generates interactive HTML reports with clickable thumbnails
+### Legacy Generators (in attic/)
 
-3. **Music Video Generators** (Various approaches):
-   - `progressive_sampling_generator.py` - Creates journey through entire movie
-   - `robust_music_video_generator.py` - Handles numpy formatting issues
-   - `bulletproof_generator.py` - Error-resistant implementation
-   - `forward_only_generator.py` - Forward-only progression through scenes
+Old generators moved to `attic/` directory:
+- ultraRobustArchivalTool.py - Original primary production tool
+- ArchivalRemixEngine.py - Original archival remix engine
+- progressive_sampling_generator.py - Creates journey through entire movie
+- robust_music_video_generator.py - Handles numpy formatting issues
+- bulletproof_generator.py - Error-resistant implementation
+- forward_only_generator.py - Forward-only progression through scenes
 
 ### Key Processing Steps
 
