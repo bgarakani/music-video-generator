@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 from datetime import datetime
 import warnings
-warnings.filterwarnings("ignore")
+# Suppress specific PySceneDetect deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="scenedetect")
 
 from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector
@@ -141,6 +142,7 @@ class FilmLibrary:
         print(f"   Threshold: {self.threshold}")
         print(f"   Min scene length: {self.min_scene_len}s")
 
+        video_manager = None
         try:
             # Set up scene detection
             video_manager = VideoManager([self.film_path])
@@ -159,6 +161,7 @@ class FilmLibrary:
 
             # Process scenes
             self.scenes = []
+            filtered_scene_id = 0
             for i, scene in enumerate(scene_list):
                 start_time = self.safe_float(scene[0].get_seconds())
                 end_time = self.safe_float(scene[1].get_seconds())
@@ -169,19 +172,20 @@ class FilmLibrary:
                     continue
 
                 scene_info = {
-                    'id': i,
+                    'id': filtered_scene_id,  # Use sequential ID for kept scenes
                     'start': start_time,
                     'end': end_time,
                     'duration': duration,
-                    'clip_filename': f"scene_{i:04d}.mp4",
-                    'thumbnail_filename': f"thumb_{i:04d}.jpg"
+                    'clip_filename': f"scene_{filtered_scene_id:04d}.mp4",
+                    'thumbnail_filename': f"thumb_{filtered_scene_id:04d}.jpg"
                 }
 
                 self.scenes.append(scene_info)
+                filtered_scene_id += 1
 
                 # Progress reporting
                 if (i + 1) % 20 == 0:
-                    print(f"   Processed {i + 1}/{len(scene_list)} scenes...")
+                    print(f"   Analyzed {i + 1}/{len(scene_list)} raw scenes...")
 
             print(f"   ✓ Detected {len(self.scenes)} scenes (filtered by min_scene_len)")
 
@@ -190,6 +194,9 @@ class FilmLibrary:
         except Exception as e:
             print(f"   ✗ Scene detection failed: {e}")
             return []
+        finally:
+            if video_manager is not None:
+                video_manager.release()
 
     def get_scenes(self):
         """Return list of available scenes with metadata.
