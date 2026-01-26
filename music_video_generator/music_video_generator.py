@@ -139,3 +139,34 @@ class MusicVideoGenerator:
             }
 
             return self.music_analysis
+
+    def validate_scene_beat_ratio(self):
+        """Check if enough scenes for beats, warn/suggest alternatives.
+
+        Returns:
+            bool: True to continue, False to abort
+        """
+        scenes = self.film_library.get_scenes()
+
+        # Calculate effective beat count after beat_skip
+        effective_beats = len(self.beat_times) // self.beat_skip
+
+        # Check if we have enough scenes
+        if len(scenes) < effective_beats:
+            ratio = effective_beats / len(scenes)
+            suggested_skip = int(np.ceil(ratio))
+
+            print(f"\n⚠️  WARNING: Insufficient clips for beat count")
+            print(f"   Scenes available: {len(scenes)}")
+            print(f"   Beats to use: {effective_beats} (every {self.beat_skip} beat)")
+            print(f"   Ratio: {ratio:.1f} beats per scene")
+            print(f"\n   SUGGESTIONS:")
+            print(f"   1. Use --beat-skip {suggested_skip} (1 clip per {suggested_skip} beats)")
+            print(f"   2. Use 'random' or 'no-repeat' strategy (allows scene reuse)")
+            print(f"   3. Lower scene detection --threshold to detect more scenes")
+            print(f"\n   Continuing with current settings...")
+
+            return True
+
+        print(f"\n✓ Scene-beat ratio valid: {len(scenes)} scenes for {effective_beats} beats")
+        return True

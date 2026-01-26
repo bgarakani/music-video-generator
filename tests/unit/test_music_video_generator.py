@@ -83,3 +83,44 @@ class TestMusicVideoGenerator:
         assert gen.safe_float(3.14) == 3.14
         assert gen.safe_float(np.float64(3.14)) == 3.14
         assert gen.safe_float("invalid") == 0.0
+
+    def test_validate_insufficient_scenes(self, tmp_path, capsys):
+        """Test validation warning when scenes < beats."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), clips_library_dir=str(tmp_path / "lib"))
+        library.scenes = [{'id': i, 'start': i, 'end': i+1, 'duration': 1}
+                          for i in range(10)]  # Only 10 scenes
+
+        song_path = tmp_path / "test.mp3"
+        song_path.touch()
+
+        gen = MusicVideoGenerator(library, str(song_path))
+        gen.beat_times = [i * 0.5 for i in range(100)]  # 100 beats
+
+        result = gen.validate_scene_beat_ratio()
+
+        captured = capsys.readouterr()
+        assert "⚠️  WARNING" in captured.out
+        assert "10" in captured.out  # scene count
+        assert "100" in captured.out  # beat count
+        assert result is True  # Should allow continuing
+
+    def test_validate_sufficient_scenes(self, tmp_path):
+        """Test validation passes when scenes >= beats."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), clips_library_dir=str(tmp_path / "lib"))
+        library.scenes = [{'id': i, 'start': i, 'end': i+1, 'duration': 1}
+                          for i in range(100)]  # 100 scenes
+
+        song_path = tmp_path / "test.mp3"
+        song_path.touch()
+
+        gen = MusicVideoGenerator(library, str(song_path))
+        gen.beat_times = [i * 0.5 for i in range(50)]  # 50 beats
+
+        result = gen.validate_scene_beat_ratio()
+        assert result is True
