@@ -2,6 +2,7 @@
 """Unit tests for FilmLibrary class."""
 import pytest
 import json
+import os
 from pathlib import Path
 from music_video_generator.film_library import FilmLibrary
 
@@ -151,3 +152,16 @@ class TestFilmLibrary:
         result = library._load_from_cache()
 
         assert result is False
+
+    @pytest.mark.skipif(not os.path.exists("test-assets/test_video.mp4"),
+                        reason="Test video not available")
+    def test_detect_scenes(self):
+        """Test scene detection with real video."""
+        library = FilmLibrary("test-assets/test_video.mp4", threshold=30.0)
+        scenes = library.detect_scenes()
+
+        assert len(scenes) > 0
+        assert all("id" in s for s in scenes)
+        assert all("start" in s for s in scenes)
+        assert all("end" in s for s in scenes)
+        assert all("duration" in s for s in scenes)

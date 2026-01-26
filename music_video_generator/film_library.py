@@ -4,6 +4,11 @@ import os
 import json
 from pathlib import Path
 from datetime import datetime
+import warnings
+warnings.filterwarnings("ignore")
+
+from scenedetect import VideoManager, SceneManager
+from scenedetect.detectors import ContentDetector
 
 
 class FilmLibrary:
@@ -125,6 +130,66 @@ class FilmLibrary:
         print(f"  Cache location: {self.library_dir}")
 
         return True
+
+    def detect_scenes(self):
+        """Run PySceneDetect scene detection.
+
+        Returns:
+            list: Scene metadata dictionaries
+        """
+        print(f"\n🎬 Detecting scenes in {self.film_name}...")
+        print(f"   Threshold: {self.threshold}")
+        print(f"   Min scene length: {self.min_scene_len}s")
+
+        try:
+            # Set up scene detection
+            video_manager = VideoManager([self.film_path])
+            scene_manager = SceneManager()
+            scene_manager.add_detector(
+                ContentDetector(threshold=self.threshold)
+            )
+
+            # Detect scenes
+            video_manager.set_duration()
+            video_manager.start()
+            scene_manager.detect_scenes(frame_source=video_manager)
+            scene_list = scene_manager.get_scene_list()
+
+            print(f"   Found {len(scene_list)} raw scenes")
+
+            # Process scenes
+            self.scenes = []
+            for i, scene in enumerate(scene_list):
+                start_time = self.safe_float(scene[0].get_seconds())
+                end_time = self.safe_float(scene[1].get_seconds())
+                duration = end_time - start_time
+
+                # Filter by minimum duration
+                if duration < self.min_scene_len:
+                    continue
+
+                scene_info = {
+                    'id': i,
+                    'start': start_time,
+                    'end': end_time,
+                    'duration': duration,
+                    'clip_filename': f"scene_{i:04d}.mp4",
+                    'thumbnail_filename': f"thumb_{i:04d}.jpg"
+                }
+
+                self.scenes.append(scene_info)
+
+                # Progress reporting
+                if (i + 1) % 20 == 0:
+                    print(f"   Processed {i + 1}/{len(scene_list)} scenes...")
+
+            print(f"   ✓ Detected {len(self.scenes)} scenes (filtered by min_scene_len)")
+
+            return self.scenes
+
+        except Exception as e:
+            print(f"   ✗ Scene detection failed: {e}")
+            return []
 
     def get_scenes(self):
         """Return list of available scenes with metadata.
