@@ -210,3 +210,33 @@ class TestFilmLibrary:
         assert 'avg_brightness' in library.scenes[0]
         assert 'avg_color_hex' in library.scenes[0]
         assert 'pace' in library.scenes[0]
+
+    def test_save_and_load_metadata(self, tmp_path):
+        """Test saving and loading metadata."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), threshold=25.0,
+                             clips_library_dir=str(tmp_path / "lib"))
+        library.library_dir.mkdir(parents=True, exist_ok=True)
+
+        # Add sample scenes
+        library.scenes = [
+            {'id': 0, 'start': 0.0, 'end': 2.0, 'duration': 2.0,
+             'avg_brightness': 100.0, 'pace': 'fast'}
+        ]
+
+        # Save metadata
+        library.save_metadata()
+
+        # Verify file exists
+        assert (library.library_dir / "metadata.json").exists()
+
+        # Load in new instance
+        library2 = FilmLibrary(str(film_path), threshold=25.0,
+                              clips_library_dir=str(tmp_path / "lib"))
+        success = library2._load_from_cache()
+
+        assert success is True
+        assert len(library2.scenes) == 1
+        assert library2.scenes[0]['id'] == 0
