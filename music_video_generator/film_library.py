@@ -5,11 +5,13 @@ import json
 from pathlib import Path
 from datetime import datetime
 import warnings
+import gc
 # Suppress specific PySceneDetect deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="scenedetect")
 
 from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector
+from moviepy.editor import VideoFileClip
 
 
 class FilmLibrary:
@@ -197,6 +199,89 @@ class FilmLibrary:
         finally:
             if video_manager is not None:
                 video_manager.release()
+
+    def extract_clips(self, scenes):
+        """Extract individual scene clips to clips/ directory.
+
+        Args:
+            scenes: List of scene metadata dictionaries
+
+        Returns:
+            int: Count of successfully exported clips
+        """
+        print(f"\n🎞️  Extracting {len(scenes)} scene clips...")
+
+        # Ensure clips directory exists
+        self.clips_dir.mkdir(parents=True, exist_ok=True)
+
+        clips_exported = 0
+        clips_failed = []
+
+        try:
+            # Load video without audio (faster, clips don't need audio)
+            video = VideoFileClip(self.film_path, audio=False)
+            video_duration = video.duration
+
+            for i, scene in enumerate(scenes):
+                # Progress reporting every 20 clips
+                if (i + 1) % 20 == 0:
+                    print(f"   Extracting clip {i + 1}/{len(scenes)}...")
+
+                try:
+                    start_time = scene['start']
+                    end_time = min(scene['end'], video_duration)
+                    clip_path = self.clips_dir / scene['clip_filename']
+
+                    # Validate bounds
+                    if start_time >= video_duration:
+                        clips_failed.append(i)
+                        continue
+
+                    # Ensure minimum duration
+                    if end_time - start_time < 0.1:
+                        clips_failed.append(i)
+                        continue
+
+                    # Extract clip
+                    clip = video.subclip(start_time, end_time)
+
+                    # Export with settings from v20
+                    clip.write_videofile(
+                        str(clip_path),
+                        codec='libx264',
+                        audio=False,
+                        verbose=False,
+                        logger=None,
+                        preset='fast',
+                        threads=2,
+                        fps=15,  # Lower FPS for efficiency
+                        write_logfile=False
+                    )
+
+                    clip.close()
+                    clips_exported += 1
+
+                    # Update scene metadata
+                    scene['has_clip'] = True
+
+                except Exception as e:
+                    clips_failed.append(i)
+                    scene['has_clip'] = False
+                    continue
+
+            # Cleanup
+            video.close()
+            gc.collect()
+
+            print(f"   ✓ Exported {clips_exported} clips")
+            if clips_failed:
+                print(f"   ⚠ Failed to export {len(clips_failed)} clips")
+
+            return clips_exported
+
+        except Exception as e:
+            print(f"   ✗ Clip extraction failed: {e}")
+            return 0
 
     def get_scenes(self):
         """Return list of available scenes with metadata.

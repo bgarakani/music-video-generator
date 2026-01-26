@@ -165,3 +165,25 @@ class TestFilmLibrary:
         assert all("start" in s for s in scenes)
         assert all("end" in s for s in scenes)
         assert all("duration" in s for s in scenes)
+
+    @pytest.mark.skipif(not os.path.exists("test-assets/test_video.mp4"),
+                        reason="Test video not available")
+    def test_extract_clips(self, tmp_path):
+        """Test clip extraction from detected scenes."""
+        library = FilmLibrary("test-assets/test_video.mp4",
+                             clips_library_dir=str(tmp_path))
+
+        # Create sample scenes
+        library.scenes = [
+            {'id': 0, 'start': 0.0, 'end': 2.0, 'duration': 2.0,
+             'clip_filename': 'scene_0000.mp4'},
+            {'id': 1, 'start': 2.0, 'end': 4.0, 'duration': 2.0,
+             'clip_filename': 'scene_0001.mp4'}
+        ]
+
+        library.clips_dir.mkdir(parents=True, exist_ok=True)
+
+        count = library.extract_clips(library.scenes)
+
+        assert count > 0
+        assert (library.clips_dir / "scene_0000.mp4").exists()
