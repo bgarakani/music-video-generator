@@ -104,3 +104,50 @@ class TestFilmLibrary:
 
         result = library._check_cache()
         assert result is False
+
+    def test_load_from_cache_success(self, tmp_path):
+        """Test successful loading from cache."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), clips_library_dir=str(tmp_path / "lib"))
+        library.library_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create valid metadata
+        metadata = {
+            "scene_detection_params": {
+                "threshold": 30.0,
+                "min_scene_len": 1.0
+            },
+            "scenes": [
+                {"id": 0, "start": 0.0, "end": 2.0, "duration": 2.0},
+                {"id": 1, "start": 2.0, "end": 4.0, "duration": 2.0}
+            ],
+            "total_scenes": 2
+        }
+
+        with open(library.library_dir / "metadata.json", "w") as f:
+            json.dump(metadata, f)
+
+        result = library._load_from_cache()
+
+        assert result is True
+        assert len(library.scenes) == 2
+        assert library.scenes[0]["id"] == 0
+        assert library.metadata["total_scenes"] == 2
+
+    def test_load_from_cache_malformed_json(self, tmp_path):
+        """Test loading fails gracefully with malformed JSON."""
+        film_path = tmp_path / "test.mp4"
+        film_path.touch()
+
+        library = FilmLibrary(str(film_path), clips_library_dir=str(tmp_path / "lib"))
+        library.library_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write malformed JSON
+        with open(library.library_dir / "metadata.json", "w") as f:
+            f.write("{invalid json")
+
+        result = library._load_from_cache()
+
+        assert result is False
