@@ -401,17 +401,24 @@ pytest tests/integration/          # Integration tests
 pytest tests/performance/          # Performance benchmarks
 ```
 
-### Run Simple Working Test
+### Generate Test Assets
+
+If test assets are missing or need regeneration:
 
 ```bash
-python simple_working_test.py
+# Generate 3-minute audio with varying BPM (120→60→90)
+python tests/utils/create_test_audio.py
+
+# Generate 10-minute video with 300+ color transitions
+python tests/utils/create_test_video.py
 ```
 
-Verifies:
-- Library imports
-- Librosa audio analysis
-- Scene detection
-- FFmpeg availability
+### Run with Coverage
+
+```bash
+pytest tests/ --cov=. --cov-report=html
+# Open htmlcov/index.html to view coverage report
+```
 
 ## Legacy Generators
 

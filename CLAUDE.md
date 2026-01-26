@@ -36,26 +36,36 @@ python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy ran
 
 ## Testing & Development
 
-### Test All Functionality
+### Run Complete Test Suite
 ```bash
-python simple_working_test.py
+python run_tests.py
 ```
-This comprehensive test script verifies:
-- All library imports work correctly
-- Librosa audio analysis (using built-in example)
-- Scene detection with generated test video
-- FFmpeg availability
+This runs the comprehensive pytest-based test suite including:
+- **Unit tests**: Audio processing, scene detection, film library, generators
+- **Integration tests**: Full workflow, end-to-end generation
+- **Performance benchmarks**: Scene detection, audio analysis timing
+- **Code coverage report**: Generated in `htmlcov/index.html`
 
-### Setup Verification
+### Run Specific Test Categories
 ```bash
-python test_setup.py
+# Run only unit tests
+python -m pytest tests/unit/ -v
+
+# Run only integration tests
+python -m pytest tests/integration/ -v
+
+# Run with coverage
+python -m pytest tests/ --cov=. --cov-report=html
 ```
 
-### Test Individual Components
+### Generate Test Assets
+If test assets are missing or need regeneration:
 ```bash
-python moviepy_final_test.py     # Test MoviePy functionality
-python progressive_test_script.py  # Test progressive sampling
-python tempo_change_test.py      # Test tempo adaptation
+# Generate 3-minute audio with varying BPM (120→60→90)
+python tests/utils/create_test_audio.py
+
+# Generate 10-minute video with 300+ color transitions
+python tests/utils/create_test_video.py
 ```
 
 ## Core Architecture
@@ -102,6 +112,29 @@ Scene Metadata ←→ Beat Synchronization → Video Assembly → Final Output
 - `archival_output/` - Generated output with timestamped directories
 - `experiments/` - Experimental combinations (e.g., SpongBob + Eric B & Rakim)
 - `input/` - Input staging area
+
+### V2.0 Project Structure
+
+The v2.0 refactor introduced a clean modular architecture:
+
+**Root Files:**
+- `music_video_generator.py` - Main CLI entry point
+- `run_tests.py` - Comprehensive pytest-based test runner
+- `setup.py` - Package installation configuration
+
+**Core Package (`music_video_generator/`):**
+- `film_library.py` - Film analysis and caching with metadata
+- `music_video_generator.py` - Video generation with multiple strategies
+- `cli.py` - Command-line interface
+
+**Testing Infrastructure (`tests/`):**
+- `unit/` - Unit tests for individual components
+- `integration/` - End-to-end workflow tests
+- `performance/` - Performance benchmarks
+- `utils/` - Test asset generators (`create_test_audio.py`, `create_test_video.py`)
+
+**Legacy Code (`attic/`):**
+- All previous generator versions and legacy test scripts
 
 ## Output Structure
 
