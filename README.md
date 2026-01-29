@@ -4,8 +4,11 @@ An intelligent Music Video Generation & Archival Remix Engine that creates artis
 
 ## Features
 
-- **Two-Phase Architecture**: Separate film preparation (one-time) from video generation (fast, repeatable)
-- **Intelligent Caching**: Film analysis cached and reused across multiple music tracks
+- **Three-Phase Architecture**: Separate film and music preparation (one-time) from video generation (fast, repeatable)
+- **Direct FFmpeg Integration**: All video operations (clip extraction, trimming, concatenation, audio) use FFmpeg directly
+- **Intelligent Caching**:
+  - Film clips extracted via FFmpeg with audio preserved
+  - Music analysis (beats, BPM) cached and reused across multiple films
 - **Four Scene Selection Strategies**:
   - **Progressive**: Evenly distributed chronological journey through the film
   - **Random**: Pure random selection with repetition for energetic cuts
@@ -23,7 +26,7 @@ An intelligent Music Video Generation & Archival Remix Engine that creates artis
 pip install librosa moviepy scenedetect[opencv] numpy matplotlib opencv-python scipy
 ```
 
-**FFmpeg is required** and must be installed separately:
+**FFmpeg is required** (used directly for clip extraction) and must be installed separately:
 ```bash
 # macOS
 brew install ffmpeg
@@ -53,7 +56,7 @@ python music_video_generator.py --prepare --film movie.mp4
 
 This creates a scene library at `clips_library/{film_name}/` containing:
 - Scene detection metadata
-- Individual scene clips
+- Individual scene clips **with audio preserved**
 - Thumbnail images
 - Scene analysis (color, brightness, pace)
 
@@ -61,12 +64,31 @@ This creates a scene library at `clips_library/{film_name}/` containing:
 - `--threshold 30.0` - Scene detection sensitivity (10-50, default: 30)
 - `--min-scene-len 1.0` - Minimum scene duration in seconds
 
-### 2. Generate Music Video
+### 2. Prepare Music Library (One-Time Per Song)
 
-Create a music video using the prepared film library:
+Analyze a song and cache beat detection results:
+
+```bash
+python music_video_generator.py --prepare --song track.mp3
+```
+
+This creates a music library at `music_library/{song_name}/` containing:
+- Beat detection data (beat times, BPM)
+- Audio duration and sample rate
+- Tempo confidence metrics
+
+**You can also prepare both at once:**
+```bash
+python music_video_generator.py --prepare --film movie.mp4 --song track.mp3
+```
+
+### 3. Generate Music Video
+
+Create a music video using the prepared libraries:
 
 ```bash
 # Basic usage (progressive strategy, every beat)
+# Uses cached film clips and music analysis automatically
 python music_video_generator.py --film movie.mp4 --song track.mp3
 
 # Fewer cuts (every 2nd beat)
@@ -78,6 +100,12 @@ python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy ran
 # Forward-only progression
 python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy forward_only
 ```
+
+**Note:** The generator automatically:
+- Trims clips to beat duration using FFmpeg
+- Concatenates clips and adds music track via FFmpeg
+- Uses cached music analysis if available (faster!)
+- Creates timestamped output in `music_videos/` directory
 
 **Strategy Details:**
 

@@ -22,9 +22,19 @@ pip install librosa moviepy scenedetect[opencv] numpy matplotlib opencv-python
 python music_video_generator.py --prepare --film movie.mp4 --threshold 30.0
 ```
 
+### Prepare Music Library (one-time per song)
+```bash
+python music_video_generator.py --prepare --song track.mp3
+```
+
+### Prepare Both Film and Music
+```bash
+python music_video_generator.py --prepare --film movie.mp4 --song track.mp3
+```
+
 ### Generate Music Video
 ```bash
-# With every beat (default)
+# With every beat (default) - uses cached film clips and music analysis
 python music_video_generator.py --film movie.mp4 --song track.mp3
 
 # With every 2nd beat (fewer cuts)
@@ -32,6 +42,9 @@ python music_video_generator.py --film movie.mp4 --song track.mp3 --beat-skip 2
 
 # With random strategy and every 4th beat
 python music_video_generator.py --film movie.mp4 --song track.mp3 --strategy random --beat-skip 4
+
+# Force regeneration of caches
+python music_video_generator.py --film movie.mp4 --song track.mp3 --force-regenerate-clips --force-regenerate-music
 ```
 
 ## Testing & Development
@@ -73,11 +86,15 @@ python tests/utils/create_test_video.py
 ### Active Tool
 
 **music_video_generator.py** - Unified Music Video Generator v2.0
-- Two-phase architecture: FilmLibrary + MusicVideoGenerator
-- Intelligent caching with parameter tracking
+- Three-phase architecture: FilmLibrary + MusicLibrary + MusicVideoGenerator
+- Intelligent caching with parameter tracking:
+  - FilmLibrary: Scene detection via PySceneDetect, clips extracted via **FFmpeg** (with audio preserved), thumbnails, analysis
+  - MusicLibrary: Beat detection, BPM analysis, tempo data
+  - MusicVideoGenerator: Loads clips **without audio**, attaches music track
 - Four scene selection strategies: progressive, random, forward_only, no_repeat
 - Beat-skip parameter for controlling cut frequency
 - CLI interface with comprehensive options
+- **Direct FFmpeg integration** for reliable clip extraction (bypasses MoviePy's subprocess issues)
 
 ### Legacy Generators (in attic/)
 
@@ -92,9 +109,10 @@ Old generators moved to `attic/` directory:
 ### Key Processing Steps
 
 1. **Scene Detection**: Uses PySceneDetect with ContentDetector to identify scene boundaries
-2. **Audio Analysis**: Uses librosa for beat detection and tempo analysis  
-3. **Video Synchronization**: Maps video scenes to musical beats/timing
-4. **Output Generation**: Creates remixed videos using MoviePy
+2. **Clip Extraction**: Uses **FFmpeg directly** (via subprocess) for reliable extraction with audio
+3. **Audio Analysis**: Uses librosa for beat detection and tempo analysis
+4. **Video Synchronization**: Maps video scenes to musical beats/timing
+5. **Output Generation**: Uses **FFmpeg** for clip trimming, concatenation, and audio attachment (no MoviePy for video encoding)
 
 ### Data Flow
 
@@ -109,7 +127,14 @@ Scene Metadata ←→ Beat Synchronization → Video Assembly → Final Output
 
 - `films/` - Source video files (movies, archival footage)
 - `music/` - Audio files for synchronization
-- `archival_output/` - Generated output with timestamped directories
+- `clips_library/` - Cached film scene libraries (one per film)
+  - `{film_name}/clips/` - Individual scene clips with audio preserved
+  - `{film_name}/thumbnails/` - Scene thumbnails
+  - `{film_name}/metadata.json` - Scene detection metadata
+- `music_library/` - Cached music analysis (one per song)
+  - `{song_name}/metadata.json` - Beat detection, BPM, tempo data
+- `music_videos/` - Generated music videos with timestamped directories
+- `archival_output/` - Legacy output directory
 - `experiments/` - Experimental combinations (e.g., SpongBob + Eric B & Rakim)
 - `input/` - Input staging area
 
@@ -123,8 +148,9 @@ The v2.0 refactor introduced a clean modular architecture:
 - `setup.py` - Package installation configuration
 
 **Core Package (`music_video_generator/`):**
-- `film_library.py` - Film analysis and caching with metadata
-- `music_video_generator.py` - Video generation with multiple strategies
+- `film_library.py` - Film analysis and caching with metadata; uses **FFmpeg** for clip extraction (with audio); MoviePy only for thumbnails/analysis
+- `music_library.py` - Music analysis and caching (beat detection, BPM, tempo)
+- `music_video_generator.py` - Video generation with multiple strategies; uses **FFmpeg** for trimming, concatenation, and audio attachment
 - `cli.py` - Command-line interface
 
 **Testing Infrastructure (`tests/`):**

@@ -1,12 +1,25 @@
 # Progress: Music Video Generator v2.0
 
-## Latest Major Update: v2.0 Refactor (January 2026) ✅
+## Latest Major Update: v2.1 FFmpeg Integration & Audio Preservation (January 2026) ✅
 
-### Complete Architectural Refactor
-The project has undergone a major refactor implementing a two-phase architecture that separates film preparation from video generation. This significantly improves efficiency and user experience.
+### FFmpeg Direct Integration & Music Library Features
+The project has been enhanced with direct FFmpeg integration for reliable clip extraction, audio preservation in film clips, and intelligent music analysis caching.
 
 **Key Changes:**
-- **Two-Phase Architecture**: Film analysis runs once, cached for reuse across multiple songs
+- **FFmpeg Direct Integration**: Clip extraction now uses FFmpeg directly via subprocess (bypasses MoviePy's logger issues)
+- **Audio Preservation**: Film clips saved with original audio using FFmpeg (removed during generation)
+- **MusicLibrary Class**: Music analysis (beats, BPM) cached for reuse across multiple films
+- **Three-Phase Architecture**: FilmLibrary + MusicLibrary + MusicVideoGenerator
+- **Force Regeneration Flags**: Separate controls for film and music cache invalidation
+- **Dual Preparation Mode**: Can prepare film, music, or both in single command
+
+## Previous Major Update: v2.0 Refactor (January 2026) ✅
+
+### Complete Architectural Refactor
+The project underwent a major refactor implementing a multi-phase architecture that separates preparation from video generation.
+
+**Key Changes:**
+- **Multi-Phase Architecture**: Film and music analysis run once, cached for reuse
 - **Intelligent Caching**: Parameter-based cache validation ensures accuracy
 - **Unified API**: Single command-line interface with comprehensive options
 - **Four Selection Strategies**: Progressive, random, forward_only, no_repeat
@@ -15,30 +28,47 @@ The project has undergone a major refactor implementing a two-phase architecture
 
 ## What Works
 
-### Core v2.0 Architecture ✅
+### Core v2.1 Architecture ✅
 
 **Phase 1: FilmLibrary (One-time per film)**
 - **Scene Detection**: PySceneDetect with ContentDetector and threshold configuration
 - **Cache Management**: Intelligent parameter-based cache detection and validation
-- **Clip Extraction**: Individual scene clips exported to reusable library
+- **Clip Extraction**: Uses **FFmpeg directly** for reliable extraction with audio preserved
 - **Thumbnail Generation**: Visual previews for all scenes
 - **Scene Analysis**: Color, brightness, pace, and position analysis
 - **Metadata Persistence**: Complete analysis saved to JSON format
 
-**Phase 2: MusicVideoGenerator (Fast, repeatable)**
-- **Audio Analysis**: librosa beat detection with tempo estimation
+**Phase 2: MusicLibrary (One-time per song)**
+- **Audio Analysis**: librosa beat detection with BPM and tempo estimation
+- **Beat Caching**: Beat times array cached for instant reuse
+- **Metadata Storage**: Duration, BPM, beats, sample rate, tempo confidence
+- **Cache Management**: Optional force regeneration flag
+- **Fast Lookup**: Skips expensive librosa analysis when cache exists
+
+**Phase 3: MusicVideoGenerator (Fast, repeatable)**
+- **Cached Audio Analysis**: Uses MusicLibrary cache when available
 - **Scene-Beat Validation**: Ratio checking with helpful suggestions
 - **Strategy-Based Selection**: Four distinct scene selection algorithms
-- **Video Assembly**: MoviePy concatenation with FFmpeg final rendering
+- **Video Assembly**: Uses **FFmpeg directly** - trims clips to beat duration, concatenates, adds music
 - **Output Management**: Timestamped directories with organized output
 
 ### Command-Line Interface ✅
 ```bash
-# Prepare film (one-time)
+# Prepare film (one-time, clips saved with audio)
 python music_video_generator.py --prepare --film movie.mp4
 
-# Generate video (fast)
+# Prepare music (one-time, caches beat analysis)
+python music_video_generator.py --prepare --song track.mp3
+
+# Prepare both at once
+python music_video_generator.py --prepare --film movie.mp4 --song track.mp3
+
+# Generate video (fast, uses both caches, audio removed from clips)
 python music_video_generator.py --film movie.mp4 --song track.mp3
+
+# Force regeneration
+python music_video_generator.py --film movie.mp4 --song track.mp3 \
+  --force-regenerate-clips --force-regenerate-music
 
 # With options
 python music_video_generator.py --film movie.mp4 --song track.mp3 \
@@ -73,7 +103,9 @@ python music_video_generator.py --film movie.mp4 --song track.mp3 \
 - **Performance**: Fast generation (~1-2 min for 3-min video after caching)
 
 ### Active Features
-- **Intelligent Caching**: Film analysis cached and reused (~10x speedup for subsequent videos)
+- **Intelligent Caching**: Film and music analysis cached and reused (~10x speedup)
+- **Audio Preservation**: Film clips retain original audio, removed during generation
+- **Music Library**: Beat detection cached for reuse across multiple films
 - **Flexible Strategies**: Four scene selection algorithms for different creative goals
 - **Beat Synchronization**: Configurable beat-skip parameter (1-4+ beats)
 - **Rich Metadata**: Scene analysis with color, brightness, pace metrics
@@ -87,6 +119,20 @@ python music_video_generator.py --film movie.mp4 --song track.mp3 \
 - **Audio Analysis**: <10 seconds for 3-minute track
 
 ## What Was Completed Recently
+
+### v2.1 FFmpeg Integration & Audio Preservation (January 2026)
+1. ✅ **FFmpeg Direct Integration** - Clip extraction now uses FFmpeg via subprocess (bypasses MoviePy logger issues)
+2. ✅ **Audio Preservation in Clips** - Film clips saved with audio using FFmpeg's aac codec
+3. ✅ **MusicLibrary Class** - New class for music analysis caching
+4. ✅ **Music Preparation Mode** - `--prepare --song` command support
+5. ✅ **Dual Preparation Mode** - `--prepare --film --song` for both at once
+6. ✅ **Video Assembly Method** - Complete `assemble_video()` implementation
+7. ✅ **Audio Removal During Generation** - Clips loaded without audio, music attached
+8. ✅ **Force Music Regeneration** - `--force-regenerate-music` flag
+9. ✅ **Cached Audio Analysis** - MusicVideoGenerator uses cached beats when available
+10. ✅ **Documentation Updates** - README.md, CLAUDE.md, memory-bank updated
+11. ✅ **Three-Phase Architecture** - FilmLibrary + MusicLibrary + Generator
+12. ✅ **ffprobe Integration** - Video duration and audio stream detection via ffprobe
 
 ### v2.0 Refactor (24 commits, January 2026)
 1. ✅ **FilmLibrary Foundation** - Core class with validation and type safety

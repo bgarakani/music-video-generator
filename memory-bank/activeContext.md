@@ -1,14 +1,23 @@
-# Active Context: Music Video Generator v2.0
+# Active Context: Music Video Generator v2.1
 
 **Last Updated**: January 26, 2026
 
 ## Current State
 
-### Project Status: Production Ready v2.0 🚀
+### Project Status: Production Ready v2.1 🚀
 
-The Music Video Generator has been successfully refactored to v2.0 with a two-phase architecture. The system is production-ready with comprehensive documentation, testing, and real-world usage examples.
+The Music Video Generator has been enhanced to v2.1 with audio preservation and music library caching. The system now has a three-phase architecture with intelligent caching for both film and music analysis.
 
 ### Recent Major Accomplishment (January 2026)
+
+**v2.1 FFmpeg Integration & Audio Preservation - Complete** ✅
+- **FFmpeg direct integration** for clip extraction (bypasses MoviePy's logger issues)
+- Audio preserved in film clips during preparation (via FFmpeg)
+- MusicLibrary class for caching beat detection
+- Three-phase architecture: FilmLibrary + MusicLibrary + Generator
+- Clips loaded without audio during generation
+- Music track attached in final assembly
+- Documentation fully updated
 
 **v2.0 Refactor - Complete** ✅
 - 24 commits implementing complete architectural overhaul
@@ -33,10 +42,25 @@ The Music Video Generator has been successfully refactored to v2.0 with a two-ph
 
 ### Key Features Delivered
 
-**Two-Phase Architecture**
-- FilmLibrary: One-time film analysis with intelligent caching
-- MusicVideoGenerator: Fast, repeatable video generation
-- 10x speedup for generating multiple videos from same film
+**Three-Phase Architecture**
+- FilmLibrary: One-time film analysis; clips extracted via **FFmpeg directly** with audio
+- MusicLibrary: One-time music analysis with beat detection caching
+- MusicVideoGenerator: Fast generation using both caches, loads clips **without audio**
+- 10x speedup for generating multiple videos from same film or song
+
+**FFmpeg Integration (All Video Operations)**
+- **Clip extraction**: FFmpeg directly via subprocess
+- **Video assembly**: FFmpeg concat demuxer + audio attachment
+- **Clip trimming**: FFmpeg trims clips to beat duration
+- Completely bypasses MoviePy's problematic logger/subprocess handling
+- ffprobe used for video duration and audio stream detection
+- MoviePy only used for thumbnails and scene analysis (read-only operations)
+
+**Audio Workflow**
+- Preparation: Film clips retain original audio (extracted via FFmpeg)
+- Generation: Clips trimmed without audio via FFmpeg, music track attached via FFmpeg
+- Benefit: Preserves original audio while using only music in final video
+- All video operations now use FFmpeg directly (no MoviePy for encoding)
 
 **Four Scene Selection Strategies**
 - Progressive: Evenly distributed chronological journey
@@ -46,10 +70,16 @@ The Music Video Generator has been successfully refactored to v2.0 with a two-ph
 
 **Command-Line Interface**
 ```bash
-# Prepare film (one-time)
+# Prepare film (one-time, with audio)
 python music_video_generator.py --prepare --film movie.mp4
 
-# Generate video (fast)
+# Prepare music (one-time, cache beats)
+python music_video_generator.py --prepare --song track.mp3
+
+# Prepare both at once
+python music_video_generator.py --prepare --film movie.mp4 --song track.mp3
+
+# Generate video (fast, uses caches, clips loaded without audio)
 python music_video_generator.py --film movie.mp4 --song track.mp3 \
   --strategy progressive --beat-skip 2
 ```

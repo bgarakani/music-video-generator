@@ -20,6 +20,9 @@ archival_output/
 experiments/
 films/
 music/
+clips_library/
+music_library/
+music_videos/
 
 # Ignore all media files everywhere
 *.mp3
@@ -33,3 +36,6 @@ music/
 *.mkv
 *.avi
 *.wmv
+*.jpg
+*.jpeg
+
