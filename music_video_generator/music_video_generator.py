@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """MusicVideoGenerator class for creating music videos from film libraries."""
+
 import os
 import sys
 import subprocess
@@ -40,6 +41,7 @@ class MusicVideoGenerator:
         beat_skip=1,
         output_dir="music_videos",
         music_library=None,
+        subtitle_path=None,
     ):
         """Initialize MusicVideoGenerator.
 
@@ -50,6 +52,7 @@ class MusicVideoGenerator:
             beat_skip: Use every Nth beat (1=every beat, 2=every other beat)
             output_dir: Base directory for music video outputs
             music_library: Optional MusicLibrary instance with cached audio analysis
+            subtitle_path: Optional path to SRT subtitle file for burn-in
 
         Raises:
             FileNotFoundError: If song_path does not exist
@@ -79,6 +82,7 @@ class MusicVideoGenerator:
             Path(output_dir) / f"{film_name}_{self.song_name}_{strategy}_{timestamp}"
         )
 
+        self.subtitle_path = subtitle_path
         self.beats = []
         self.beat_times = []
         self.music_analysis = {}
@@ -504,6 +508,23 @@ class MusicVideoGenerator:
                 print("   ✗ Failed to add audio")
                 return None
 
+            # Step 5: Burn in subtitles if available
+            if self.subtitle_path and os.path.exists(self.subtitle_path):
+                print(f"   Burning in subtitles...")
+                subtitled_output = (
+                    self.output_dir / f"music_video_{self.strategy}_subtitled.mp4"
+                )
+                sub_success = self._ffmpeg_burn_subtitles(
+                    output_path, self.subtitle_path, subtitled_output
+                )
+                if sub_success:
+                    # Replace output with subtitled version
+                    output_path.unlink()
+                    subtitled_output.rename(output_path)
+                    print(f"   ✓ Subtitles burned in")
+                else:
+                    print(f"   ⚠ Subtitle burn-in failed, continuing without subtitles")
+
             # Cleanup temp files
             print(f"   Cleaning up temporary files...")
             for clip in trimmed_clips:
@@ -598,6 +619,46 @@ class MusicVideoGenerator:
             return result.returncode == 0
         except Exception as e:
             print(f"   FFmpeg concat exception: {e}")
+            return False
+
+    def _ffmpeg_burn_subtitles(self, video_path, subtitle_path, output_path):
+        """Burn subtitles into video using FFmpeg.
+
+        Args:
+            video_path: Input video path (with audio)
+            subtitle_path: Path to SRT subtitle file
+            output_path: Output video path
+
+        Returns:
+            bool: True if successful
+        """
+        try:
+            # Escape path for FFmpeg subtitles filter (colons and backslashes)
+            escaped_sub_path = (
+                str(subtitle_path)
+                .replace("\\", "\\\\")
+                .replace(":", "\\:")
+                .replace("'", "\\'")
+            )
+
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(video_path),
+                "-vf",
+                f"subtitles='{escaped_sub_path}':force_style='FontSize=22,Alignment=2,BorderStyle=3,Outline=2'",
+                "-c:a",
+                "copy",
+                str(output_path),
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"   FFmpeg subtitle error: {result.stderr[:500]}")
+            return result.returncode == 0
+        except Exception as e:
+            print(f"   FFmpeg subtitle exception: {e}")
             return False
 
     def _ffmpeg_add_audio(self, video_path, audio_path, output_path):
