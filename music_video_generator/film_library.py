@@ -354,6 +354,26 @@ class FilmLibrary:
 
         return clips_exported
 
+    def _get_frame_at_time(self, time_seconds):
+        """Extract a single frame at the given time using OpenCV.
+
+        Args:
+            time_seconds: Time position in seconds
+
+        Returns:
+            numpy.ndarray: Frame in RGB format, or None on failure
+        """
+        cap = cv2.VideoCapture(self.film_path)
+        try:
+            cap.set(cv2.CAP_PROP_POS_MSEC, time_seconds * 1000)
+            ret, frame = cap.read()
+            if not ret:
+                return None
+            # OpenCV reads BGR, convert to RGB
+            return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        finally:
+            cap.release()
+
     def _get_video_duration(self):
         """Get video duration using ffprobe."""
         try:
