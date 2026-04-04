@@ -604,29 +604,10 @@ class FilmLibrary:
     def save_metadata(self):
         """Save metadata.json to clips_library/{film_name}/"""
         print(f"\n💾 Saving metadata...")
-
-        # Ensure directory exists
         self.library_dir.mkdir(parents=True, exist_ok=True)
 
-        # Get film properties
-        try:
-            video = VideoFileClip(self.film_path, audio=False)
-            film_properties = {
-                "duration": self.safe_float(video.duration),
-                "resolution": f"{video.w}x{video.h}",
-                "fps": self.safe_float(video.fps),
-                "codec": getattr(video, "codec", "unknown"),
-            }
-            video.close()
-        except Exception:
-            film_properties = {
-                "duration": 0.0,
-                "resolution": "unknown",
-                "fps": 0.0,
-                "codec": "unknown",
-            }
+        film_properties = self._get_film_properties()
 
-        # Build metadata
         metadata = {
             "film_path": self.film_path,
             "film_name": self.film_name,
@@ -642,15 +623,12 @@ class FilmLibrary:
             "total_scenes": len(self.scenes),
         }
 
-        # Save to JSON
         metadata_path = self.library_dir / "metadata.json"
         try:
             with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
-
             print(f"   ✓ Saved metadata: {metadata_path}")
             self.metadata = metadata
-
         except IOError as e:
             print(f"   ✗ Failed to save metadata: {e}")
 
