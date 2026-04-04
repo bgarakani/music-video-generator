@@ -374,6 +374,53 @@ class FilmLibrary:
         finally:
             cap.release()
 
+    def _get_film_properties(self):
+        """Get film properties using ffprobe.
+
+        Returns:
+            dict: Film properties (duration, resolution, fps, codec)
+        """
+        defaults = {
+            "duration": 0.0,
+            "resolution": "unknown",
+            "fps": 0.0,
+            "codec": "unknown",
+        }
+        try:
+            cmd = [
+                "ffprobe",
+                "-v", "error",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=width,height,r_frame_rate,codec_name",
+                "-show_entries", "format=duration",
+                "-of", "json",
+                self.film_path,
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                return defaults
+
+            data = json.loads(result.stdout)
+            stream = data.get("streams", [{}])[0]
+            fmt = data.get("format", {})
+
+            # Parse frame rate (e.g. "30/1" or "24000/1001")
+            fps_str = stream.get("r_frame_rate", "0/1")
+            num, den = fps_str.split("/")
+            fps = float(num) / float(den) if float(den) != 0 else 0.0
+
+            width = stream.get("width", 0)
+            height = stream.get("height", 0)
+
+            return {
+                "duration": self.safe_float(fmt.get("duration", 0.0)),
+                "resolution": f"{width}x{height}" if width and height else "unknown",
+                "fps": round(fps, 2),
+                "codec": stream.get("codec_name", "unknown"),
+            }
+        except Exception:
+            return defaults
+
     def _get_video_duration(self):
         """Get video duration using ffprobe."""
         try:

@@ -288,3 +288,14 @@ def test_get_frame_at_time(film_library_with_video):
     assert isinstance(frame, np.ndarray)
     assert len(frame.shape) == 3  # height, width, channels
     assert frame.shape[2] == 3   # RGB
+
+
+def test_get_film_properties(film_library_with_video):
+    """Test that _get_film_properties returns valid metadata."""
+    props = film_library_with_video._get_film_properties()
+    assert "duration" in props
+    assert "resolution" in props
+    assert "fps" in props
+    assert props["duration"] > 0
+    assert "x" in props["resolution"]
+    assert props["fps"] > 0
