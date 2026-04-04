@@ -14,7 +14,6 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="scenedete
 
 from scenedetect import VideoManager, SceneManager
 from scenedetect.detectors import ContentDetector, AdaptiveDetector
-from moviepy.editor import VideoFileClip
 import cv2
 import numpy as np
 
