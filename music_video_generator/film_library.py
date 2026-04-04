@@ -541,15 +541,7 @@ class FilmLibrary:
         print(f"   ✓ Generated {generated} thumbnails")
 
     def analyze_scenes(self, scenes):
-        """Add color, brightness, pace analysis to scene metadata.
-
-        Args:
-            scenes: List of scene metadata dictionaries
-
-        Returns:
-            list: Scenes with added analysis metadata
-        """
-        # Validate input
+        """Add color, brightness, pace analysis to scene metadata."""
         if not scenes or not isinstance(scenes, list):
             print("   ✗ No scenes provided for analysis")
             return scenes
@@ -557,28 +549,27 @@ class FilmLibrary:
         print(f"\n🔍 Analyzing {len(scenes)} scenes...")
 
         try:
-            video = VideoFileClip(self.film_path, audio=False)
-            video_duration = video.duration
+            props = self._get_film_properties()
+            video_duration = props["duration"]
             failed_analyses = 0
 
             for scene in scenes:
                 try:
-                    # Get middle frame
                     middle_time = (scene["start"] + scene["end"]) / 2
-                    frame = video.get_frame(middle_time)
+                    frame = self._get_frame_at_time(middle_time)
 
-                    # Color analysis
+                    if frame is None:
+                        raise ValueError("Could not extract frame")
+
                     avg_color = np.mean(frame, axis=(0, 1))
                     scene["avg_color_rgb"] = avg_color.tolist()
                     scene["avg_color_hex"] = "#{:02x}{:02x}{:02x}".format(
                         int(avg_color[0]), int(avg_color[1]), int(avg_color[2])
                     )
 
-                    # Brightness analysis
                     gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
                     scene["avg_brightness"] = float(np.mean(gray))
 
-                    # Pace analysis
                     duration = scene["duration"]
                     if duration < 2:
                         scene["pace"] = "fast"
@@ -587,11 +578,11 @@ class FilmLibrary:
                     else:
                         scene["pace"] = "medium"
 
-                    # Position ratio in film
-                    scene["position_ratio"] = scene["start"] / video_duration
+                    scene["position_ratio"] = (
+                        scene["start"] / video_duration if video_duration > 0 else 0.0
+                    )
 
-                except Exception as e:
-                    # Set defaults on failure
+                except Exception:
                     scene["avg_brightness"] = 0.0
                     scene["avg_color_rgb"] = [0.0, 0.0, 0.0]
                     scene["avg_color_hex"] = "#000000"
@@ -600,7 +591,6 @@ class FilmLibrary:
                     failed_analyses += 1
                     continue
 
-            video.close()
             print(f"   ✓ Analyzed {len(scenes)} scenes")
             if failed_analyses > 0:
                 print(f"   ⚠ Failed to analyze {failed_analyses} scenes")
