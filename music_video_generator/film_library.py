@@ -508,48 +508,37 @@ class FilmLibrary:
             return False
 
     def generate_thumbnails(self, scenes):
-        """Generate thumbnail images for each scene.
-
-        Args:
-            scenes: List of scene metadata dictionaries
-        """
-        # Validate input
+        """Generate thumbnail images for each scene."""
         if not scenes or not isinstance(scenes, list):
             print("   ✗ No scenes provided for thumbnail generation")
             return
 
         print(f"\n🖼️  Generating thumbnails for {len(scenes)} scenes...")
-
-        # Ensure thumbnails directory exists
         self.thumbnails_dir.mkdir(parents=True, exist_ok=True)
 
-        try:
-            video = VideoFileClip(self.film_path, audio=False)
-
-            for i, scene in enumerate(scenes):
-                try:
-                    # Get middle frame of scene
-                    middle_time = (scene["start"] + scene["end"]) / 2
-                    frame = video.get_frame(middle_time)
-
-                    # Save thumbnail
-                    thumb_path = self.thumbnails_dir / scene["thumbnail_filename"]
-                    thumb_height = 120
-                    aspect_ratio = frame.shape[1] / frame.shape[0]
-                    thumb_width = int(thumb_height * aspect_ratio)
-                    thumb = cv2.resize(frame, (thumb_width, thumb_height))
-                    thumb_bgr = cv2.cvtColor(thumb, cv2.COLOR_RGB2BGR)
-                    cv2.imwrite(str(thumb_path), thumb_bgr)
-
-                except Exception as e:
-                    print(f"   ⚠ Failed to generate thumbnail for scene {i}: {e}")
+        generated = 0
+        for i, scene in enumerate(scenes):
+            try:
+                middle_time = (scene["start"] + scene["end"]) / 2
+                frame = self._get_frame_at_time(middle_time)
+                if frame is None:
+                    print(f"   ⚠ Failed to get frame for scene {i}")
                     continue
 
-            video.close()
-            print(f"   ✓ Generated {len(scenes)} thumbnails")
+                thumb_path = self.thumbnails_dir / scene["thumbnail_filename"]
+                thumb_height = 120
+                aspect_ratio = frame.shape[1] / frame.shape[0]
+                thumb_width = int(thumb_height * aspect_ratio)
+                thumb = cv2.resize(frame, (thumb_width, thumb_height))
+                thumb_bgr = cv2.cvtColor(thumb, cv2.COLOR_RGB2BGR)
+                cv2.imwrite(str(thumb_path), thumb_bgr)
+                generated += 1
 
-        except Exception as e:
-            print(f"   ✗ Thumbnail generation failed: {e}")
+            except Exception as e:
+                print(f"   ⚠ Failed to generate thumbnail for scene {i}: {e}")
+                continue
+
+        print(f"   ✓ Generated {generated} thumbnails")
 
     def analyze_scenes(self, scenes):
         """Add color, brightness, pace analysis to scene metadata.
