@@ -2,6 +2,7 @@
 """MusicVideoGenerator class for creating music videos from film libraries."""
 
 import os
+import re
 import sys
 import subprocess
 import tempfile
@@ -71,15 +72,40 @@ class MusicVideoGenerator:
         self.film_library = film_library
         self.music_library = music_library
         self.song_path = str(song_path)
-        self.song_name = Path(song_path).stem
         self.strategy = strategy
         self.beat_skip = beat_skip
 
-        # Set up output directory
+        # Derive song identifiers — YouTube downloads land at
+        # music_library/<sanitized-title>/song.<ext>, so fall back to the
+        # parent directory name when the stem is the generic "song".
+        song_path_obj = Path(song_path)
+        raw_song_name = (
+            song_path_obj.parent.name
+            if song_path_obj.stem == "song"
+            else song_path_obj.stem
+        )
+        if " - " in raw_song_name:
+            artist_raw, title_raw = raw_song_name.split(" - ", 1)
+        else:
+            artist_raw, title_raw = "", raw_song_name
+
+        self.song_name = raw_song_name
+        self.artist = self._sanitize_name(artist_raw)
+        self.title = self._sanitize_name(title_raw)
+        self.film_slug = self._sanitize_name(film_library.film_name)
+
+        # Build a basename for output files: film_artist_title_date (artist omitted if absent)
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        self.basename = "_".join(
+            p for p in (self.film_slug, self.artist, self.title, date_str) if p
+        )
+
+        # Set up output directory (keep timestamp + strategy for per-run uniqueness)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        film_name = film_library.film_name
+        song_slug = f"{self.artist}-{self.title}" if self.artist else self.title
         self.output_dir = (
-            Path(output_dir) / f"{film_name}_{self.song_name}_{strategy}_{timestamp}"
+            Path(output_dir)
+            / f"{self.film_slug}_{song_slug}_{strategy}_{timestamp}"
         )
 
         self.subtitle_path = subtitle_path
@@ -87,6 +113,15 @@ class MusicVideoGenerator:
         self.beat_times = []
         self.music_analysis = {}
         self.selected_scenes = []
+
+    @staticmethod
+    def _sanitize_name(name):
+        """Make a name filesystem-safe: collapse whitespace into dashes, drop reserved chars."""
+        if not name:
+            return ""
+        name = re.sub(r"\s+", "-", name.strip())
+        name = re.sub(r'[/\\:*?"<>|]', "", name)
+        return name
 
     def safe_float(self, value):
         """Safely convert value to Python float.
@@ -422,7 +457,7 @@ class MusicVideoGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         clips_dir = self.film_library.clips_dir
-        output_path = self.output_dir / f"music_video_{self.strategy}.mp4"
+        output_path = self.output_dir / f"{self.basename}.mp4"
 
         # Create a temporary concat file for FFmpeg
         concat_file = self.output_dir / "concat_list.txt"
@@ -512,7 +547,7 @@ class MusicVideoGenerator:
             if self.subtitle_path and os.path.exists(self.subtitle_path):
                 print(f"   Burning in subtitles...")
                 subtitled_output = (
-                    self.output_dir / f"music_video_{self.strategy}_subtitled.mp4"
+                    self.output_dir / f"{self.basename}_subtitled.mp4"
                 )
                 sub_success = self._ffmpeg_burn_subtitles(
                     output_path, self.subtitle_path, subtitled_output
